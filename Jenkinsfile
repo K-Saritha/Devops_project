@@ -28,13 +28,6 @@ pipeline {
             }
         }
 
-        stage('Build Application') {
-            steps {
-                echo 'Building the application...'
-                sh 'npm run build || echo "No build script found, skipping build step"'
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 echo 'Building Docker image...'
@@ -48,7 +41,7 @@ pipeline {
                 echo 'Running Docker container for testing...'
                 sh "docker run -d --name todo-app-test-${BUILD_NUMBER} -p 3000:3000 ${DOCKER_IMAGE}:${DOCKER_TAG}"
                 sh 'sleep 10' // Wait for container to start
-                sh 'curl -f http://localhost:3000/api/tasks || exit 1' // Test the API
+                sh 'docker exec todo-app-test-${BUILD_NUMBER} node -e "require(\'http\').get(\'http://localhost:3000/api/tasks\', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on(\'error\', () => process.exit(1))" || exit 1' // Test the API
                 sh "docker stop todo-app-test-${BUILD_NUMBER}"
                 sh "docker rm todo-app-test-${BUILD_NUMBER}"
             }

@@ -24,8 +24,7 @@ app.post("/api/tasks", (req, res) => {
   const newTask = {
     id: taskId++,
     text,
-    completed: false,
-    createdAt: new Date()
+    completed: false
   };
 
   tasks.push(newTask);
