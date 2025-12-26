@@ -2,7 +2,7 @@ const express = require("express");
 const app = express();
 
 app.get("/", (req, res) => {
-  res.send("🚀 Jenkins + Docker CI/CD is WORKING!");
+  res.send("🚀 Jenkins + Docker CI/CD is successfully WORKING!");
 });
 
 app.listen(3000, () => {
