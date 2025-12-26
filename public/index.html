@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .add-task {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .add-task form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .add-task input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .add-task input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .add-task button {
+            padding: 12px 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .add-task button:hover {
+            background: #218838;
+        }
+
+        .task-list {
+            padding: 0;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            transition: background-color 0.3s;
+        }
+
+        .task-item:hover {
+            background: #f8f9fa;
+        }
+
+        .task-item.completed .task-text {
+            text-decoration: line-through;
+            color: #6c757d;
+        }
+
+        .task-checkbox {
+            margin-right: 15px;
+            transform: scale(1.2);
+        }
+
+        .task-text {
+            flex: 1;
+            font-size: 16px;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state p {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .empty-state small {
+            font-size: 14px;
+        }
+
+        @media (max-width: 480px) {
+            .add-task form {
+                flex-direction: column;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📝 To-Do List</h1>
+            <p>Stay organized and get things done!</p>
+        </div>
+
+        <div class="add-task">
+            <form id="add-task-form">
+                <input type="text" id="task-input" placeholder="Enter a new task..." required>
+                <button type="submit">Add Task</button>
+            </form>
+        </div>
+
+        <ul class="task-list" id="task-list">
+            <!-- Tasks will be dynamically added here -->
+        </ul>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        const taskList = document.getElementById('task-list');
+        const addTaskForm = document.getElementById('add-task-form');
+        const taskInput = document.getElementById('task-input');
+
+        // Load tasks on page load
+        document.addEventListener('DOMContentLoaded', loadTasks);
+
+        // Add task form submission
+        addTaskForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = taskInput.value.trim();
+            if (text) {
+                await addTask(text);
+                taskInput.value = '';
+            }
+        });
+
+        // Load all tasks
+        async function loadTasks() {
+            try {
+                const response = await fetch(`${API_BASE}/tasks`);
+                const tasks = await response.json();
+                renderTasks(tasks);
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+            }
+        }
+
+        // Add a new task
+        async function addTask(text) {
+            try {
+                const response = await fetch(`${API_BASE}/tasks`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text }),
+                });
+                const newTask = await response.json();
+                loadTasks(); // Reload all tasks
+            } catch (error) {
+                console.error('Error adding task:', error);
+            }
+        }
+
+        // Toggle task completion
+        async function toggleTask(id) {
+            try {
+                await fetch(`${API_BASE}/tasks/${id}`, {
+                    method: 'PUT',
+                });
+                loadTasks(); // Reload all tasks
+            } catch (error) {
+                console.error('Error toggling task:', error);
+            }
+        }
+
+        // Delete a task
+        async function deleteTask(id) {
+            try {
+                await fetch(`${API_BASE}/tasks/${id}`, {
+                    method: 'DELETE',
+                });
+                loadTasks(); // Reload all tasks
+            } catch (error) {
+                console.error('Error deleting task:', error);
+            }
+        }
+
+        // Render tasks to the DOM
+        function renderTasks(tasks) {
+            taskList.innerHTML = '';
+
+            if (tasks.length === 0) {
+                taskList.innerHTML = `
+                    <li class="empty-state">
+                        <p>No tasks yet!</p>
+                        <small>Add your first task above.</small>
+                    </li>
+                `;
+                return;
+            }
+
+            tasks.forEach(task => {
+                const taskItem = document.createElement('li');
+                taskItem.className = `task-item ${task.completed ? 'completed' : ''}`;
+
+                taskItem.innerHTML = `
+                    <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${task.id})">
+                    <span class="task-text">${task.text}</span>
+                    <div class="task-actions">
+                        <button class="delete-btn" onclick="deleteTask(${task.id})">Delete</button>
+                    </div>
+                `;
+
+                taskList.appendChild(taskItem);
+            });
+        }
+    </script>
+</body>
+</html>
