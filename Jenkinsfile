@@ -1,0 +1,80 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = 'todo-app'
+        DOCKER_TAG = "${env.BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out source code...'
+                checkout scm
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                echo 'Installing Node.js dependencies...'
+                sh 'npm install'
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                echo 'Running tests...'
+                sh 'npm test'
+            }
+        }
+
+        stage('Build Application') {
+            steps {
+                echo 'Building the application...'
+                sh 'npm run build || echo "No build script found, skipping build step"'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building Docker image...'
+                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                sh "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
+            }
+        }
+
+        stage('Run Docker Container') {
+            steps {
+                echo 'Running Docker container for testing...'
+                sh "docker run -d --name todo-app-test-${BUILD_NUMBER} -p 3000:3000 ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                sh 'sleep 10' // Wait for container to start
+                sh 'curl -f http://localhost:3000/api/tasks || exit 1' // Test the API
+                sh "docker stop todo-app-test-${BUILD_NUMBER}"
+                sh "docker rm todo-app-test-${BUILD_NUMBER}"
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo 'Deploying application...'
+                // Add your deployment steps here
+                // For example: docker push, kubernetes deployment, etc.
+                echo 'Deployment steps would go here'
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Cleaning up...'
+            sh "docker rmi ${DOCKER_IMAGE}:${DOCKER_TAG} || true"
+            sh "docker rmi ${DOCKER_IMAGE}:latest || true"
+        }
+        success {
+            echo 'Pipeline succeeded! 🎉'
+        }
+        failure {
+            echo 'Pipeline failed! ❌'
+        }
+    }
+}
