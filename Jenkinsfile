@@ -7,61 +7,55 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout') {
             steps {
-                echo 'Checking out source code...'
                 checkout scm
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                echo 'Installing Node.js dependencies...'
                 bat 'npm install'
             }
         }
 
         stage('Run Tests') {
             steps {
-                echo 'Running tests...'
-                sh 'npm test'
+                bat 'npm test'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                echo 'Building Docker image...'
-                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
-                sh "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
+                bat "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                bat "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
             }
         }
 
-        stage('Run Docker Container') {
+        stage('Test Docker Image') {
             steps {
-                echo 'Running Docker container for testing...'
-                sh "docker run -d --name todo-app-test-${BUILD_NUMBER} -p 3000:3000 ${DOCKER_IMAGE}:${DOCKER_TAG}"
-                sh 'sleep 10' // Wait for container to start
-                sh 'docker exec todo-app-test-${BUILD_NUMBER} node -e "require(\'http\').get(\'http://localhost:3000/api/tasks\', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on(\'error\', () => process.exit(1))" || exit 1' // Test the API
-                sh "docker stop todo-app-test-${BUILD_NUMBER}"
-                sh "docker rm todo-app-test-${BUILD_NUMBER}"
+                bat """
+                docker run -d --name todo-app-test-${BUILD_NUMBER} -p 3001:3000 ${DOCKER_IMAGE}:${DOCKER_TAG}
+                timeout /t 10
+                docker exec todo-app-test-${BUILD_NUMBER} node -e "require('http').get('http://localhost:3000/api/tasks', r => process.exit(r.statusCode === 200 ? 0 : 1))"
+                docker stop todo-app-test-${BUILD_NUMBER}
+                docker rm todo-app-test-${BUILD_NUMBER}
+                """
             }
         }
 
         stage('Deploy') {
             steps {
-                echo 'Deploying application...'
-               
-                echo 'Deployment steps would go here'
+                bat """
+                docker ps -a -q --filter "name=todo-app" | findstr . && docker stop todo-app && docker rm todo-app || echo No container to remove
+                docker run -d -p 3000:3000 --name todo-app ${DOCKER_IMAGE}:latest
+                """
             }
         }
     }
 
     post {
-        always {
-            echo 'Cleaning up...'
-            sh "docker rmi ${DOCKER_IMAGE}:${DOCKER_TAG} || true"
-            sh "docker rmi ${DOCKER_IMAGE}:latest || true"
-        }
         success {
             echo 'Pipeline succeeded! 🎉'
         }
