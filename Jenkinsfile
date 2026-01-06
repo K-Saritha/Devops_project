@@ -17,7 +17,7 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 echo 'Installing Node.js dependencies...'
-                sh 'npm install'
+                bat 'npm install'
             }
         }
 
@@ -50,8 +50,7 @@ pipeline {
         stage('Deploy') {
             steps {
                 echo 'Deploying application...'
-                // Add your deployment steps here
-                // For example: docker push, kubernetes deployment, etc.
+               
                 echo 'Deployment steps would go here'
             }
         }
