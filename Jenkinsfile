@@ -20,16 +20,17 @@ pipeline {
         }
 
         stage('Test Docker Image') {
-            steps {
-                bat """
-                docker run -d --name todo-app-test -p 3001:3000 ${IMAGE_NAME}:latest
-                timeout /t 10
-                docker exec todo-app-test node -e "require('http').get('http://localhost:3000/api/tasks', r => process.exit(r.statusCode === 200 ? 0 : 1))"
-                docker stop todo-app-test
-                docker rm todo-app-test
-                """
-            }
+        steps {
+            bat """
+            docker run -d --name todo-app-test -p 3001:3000 todo-app:latest
+            ping 127.0.0.1 -n 10 > nul
+            docker exec todo-app-test node -e "require('http').get('http://127.0.0.1:3000/api/tasks', r => process.exit(r.statusCode === 200 ? 0 : 1))"
+            docker stop todo-app-test
+            docker rm todo-app-test
+            """
         }
+    }
+
 
         stage('Deploy') {
             steps {
